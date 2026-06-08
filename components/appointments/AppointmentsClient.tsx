@@ -82,7 +82,7 @@ export function AppointmentsClient({
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   useEffect(() => {
     const saved = localStorage.getItem('appointments-view') as 'list' | 'calendar' | null;
-    if (saved && saved !== 'table') {
+    if (saved) {
       setViewMode(saved);
       if (saved === 'calendar') {
         loadAppointments(initialDate, 'calendar');
