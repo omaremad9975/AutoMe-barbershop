@@ -4,12 +4,12 @@ import { DEMO_SHOP } from '@/lib/demo/data';
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-const DEFAULT_ICONS: MetadataRoute.Manifest['icons'] = [
-  { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-  { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-];
-
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const defaultIcons = [
+    { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+  ];
+
   // Demo mode — use static demo shop name
   if (DEMO_MODE) {
     return {
@@ -20,7 +20,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
       display: 'standalone',
       background_color: '#ffffff',
       theme_color: '#1a1a2e',
-      icons: DEFAULT_ICONS,
+      icons: defaultIcons,
     };
   }
 
@@ -38,14 +38,13 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
           .from('shops').select('name, logo_url').eq('id', userRow.shop_id).single();
 
         if (shop) {
-          // Use our own API route to proxy the logo — Chrome requires same-origin icons for PWA
-          const icons: MetadataRoute.Manifest['icons'] = shop.logo_url
+          const icons = shop.logo_url
             ? [
                 { src: '/api/shop-icon', sizes: 'any', type: 'image/png' },
                 { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
                 { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
               ]
-            : DEFAULT_ICONS;
+            : defaultIcons;
 
           return {
             name: shop.name,
@@ -71,6 +70,6 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     display: 'standalone',
     background_color: '#ffffff',
     theme_color: '#1a1a2e',
-    icons: DEFAULT_ICONS,
+    icons: defaultIcons,
   };
 }
