@@ -42,7 +42,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
           const icons: MetadataRoute.Manifest['icons'] = shop.logo_url
             ? [
                 { src: '/api/shop-icon', sizes: 'any', type: 'image/png' },
-                ...DEFAULT_ICONS,
+                { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+                { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
               ]
             : DEFAULT_ICONS;
 
