@@ -126,7 +126,18 @@ export function ServicesClient({ initialServices }: Props) {
     if (!deleteId) return;
     const supabase = createClient();
     const { error } = await supabase.from('services').delete().eq('id', deleteId);
-    if (!error) {
+    if (error) {
+      if (error.code === '23503') {
+        // Foreign key — service is used in invoices, deactivate instead
+        await supabase.from('services').update({ is_active: false }).eq('id', deleteId);
+        setServices((prev) => prev.map((s) => s.id === deleteId ? { ...s, is_active: false } : s));
+        toast.info(locale === 'ar'
+          ? 'الخدمة مستخدمة في فواتير سابقة — تم إيقافها بدلاً من حذفها'
+          : 'Service is used in past invoices — deactivated instead of deleted');
+      } else {
+        toast.error(locale === 'ar' ? `فشل الحذف: ${error.message}` : `Delete failed: ${error.message}`);
+      }
+    } else {
       setServices((prev) => prev.filter((s) => s.id !== deleteId));
       toast.success(tCommon('success'));
     }
