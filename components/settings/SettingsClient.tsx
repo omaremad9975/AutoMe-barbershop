@@ -95,13 +95,18 @@ export function SettingsClient({ shop }: Props) {
   const [newPosition, setNewPosition] = useState('');
 
   // ── Change Password ─────────────────────────────────────────────────────
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
   async function handleChangePassword() {
+    if (!oldPassword) {
+      toast.error(locale === 'ar' ? 'أدخل كلمة المرور الحالية' : 'Enter your current password');
+      return;
+    }
     if (!newPassword || newPassword.length < 6) {
-      toast.error(locale === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters');
+      toast.error(locale === 'ar' ? 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل' : 'New password must be at least 6 characters');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -110,11 +115,31 @@ export function SettingsClient({ shop }: Props) {
     }
     setChangingPassword(true);
     const supabase = createClient();
+
+    // Verify old password by re-signing in
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) {
+      toast.error(locale === 'ar' ? 'حدث خطأ' : 'An error occurred');
+      setChangingPassword(false);
+      return;
+    }
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: oldPassword,
+    });
+    if (signInError) {
+      toast.error(locale === 'ar' ? 'كلمة المرور الحالية غير صحيحة' : 'Current password is incorrect');
+      setChangingPassword(false);
+      return;
+    }
+
+    // Old password correct — update to new one
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
       toast.error(locale === 'ar' ? 'فشل تغيير كلمة المرور' : 'Failed to change password');
     } else {
       toast.success(locale === 'ar' ? 'تم تغيير كلمة المرور بنجاح' : 'Password changed successfully');
+      setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
     }
@@ -451,6 +476,12 @@ export function SettingsClient({ shop }: Props) {
                 : 'Change the password for your current account'}
             </p>
             <div className="space-y-3">
+              <Input
+                label={locale === 'ar' ? 'كلمة المرور الحالية' : 'Current Password'}
+                type="password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+              />
               <Input
                 label={locale === 'ar' ? 'كلمة المرور الجديدة' : 'New Password'}
                 type="password"

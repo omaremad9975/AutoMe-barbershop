@@ -2,26 +2,30 @@
 
 import { useState, useEffect } from 'react';
 import { useLocale } from 'next-intl';
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X, KeyRound, BarChart2, Search, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 // ─── UPDATE THIS every time you release new features ───────────────────────
-const CURRENT_VERSION = '1.1';
+const CURRENT_VERSION = '1.2';
 
-const WHATS_NEW: { ar: string; en: string }[] = [
+const WHATS_NEW: { ar: string; en: string; icon: React.ReactNode }[] = [
   {
+    icon: <KeyRound className="w-5 h-5 text-blue-500" />,
+    ar: 'تغيير كلمة المرور من صفحة الإعدادات — مع التحقق من كلمة المرور القديمة أولاً',
+    en: 'Change password from Settings — with old password verification first',
+  },
+  {
+    icon: <BarChart2 className="w-5 h-5 text-green-500" />,
     ar: 'صفحة الحسابات: تتبع مصاريف المحل وتقاريرها',
     en: 'Accounts page: track and report shop expenses',
   },
   {
-    ar: 'تغيير كلمة المرور من صفحة الإعدادات مباشرةً',
-    en: 'Change your password directly from Settings',
-  },
-  {
+    icon: <Search className="w-5 h-5 text-purple-500" />,
     ar: 'البحث عن العملاء في نافذة المواعيد',
     en: 'Search clients in the appointments modal',
   },
   {
+    icon: <FileCheck className="w-5 h-5 text-amber-500" />,
     ar: 'إصلاح ملخص الوردية — يظهر الآن جميع الفواتير بشكل صحيح',
     en: 'Shift summary fix — all invoices now appear correctly',
   },
@@ -49,39 +53,40 @@ export function WhatsNewModal() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#1a1a2e] to-[#2d2d5e] px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-yellow-300" />
+        <div className="bg-gradient-to-br from-[#1a1a2e] to-[#2d2d5e] px-8 py-7 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-yellow-300" />
             </div>
             <div>
-              <p className="text-xs text-white/50 font-medium">
+              <p className="text-xs text-white/50 font-medium uppercase tracking-widest">
                 {locale === 'ar' ? `الإصدار ${CURRENT_VERSION}` : `Version ${CURRENT_VERSION}`}
               </p>
-              <h2 className="text-white font-bold text-lg leading-tight">
+              <h2 className="text-white font-bold text-2xl leading-tight mt-0.5">
                 {locale === 'ar' ? 'ما الجديد؟ ✨' : "What's New ✨"}
               </h2>
             </div>
           </div>
           <button
             onClick={dismiss}
-            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition"
+            className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Feature list */}
-        <div className="px-6 py-5 space-y-3">
+        <div className="px-8 py-6 space-y-4">
           {WHATS_NEW.map((item, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
-                <div className="w-2 h-2 rounded-full bg-green-500" />
+            <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+              <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0">
+                {item.icon}
               </div>
-              <p className="text-sm text-gray-700 leading-snug">
+              <p className="text-sm text-gray-700 leading-relaxed pt-1.5">
                 {locale === 'ar' ? item.ar : item.en}
               </p>
             </div>
@@ -89,11 +94,12 @@ export function WhatsNewModal() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 pb-5">
-          <Button onClick={dismiss} className="w-full">
+        <div className="px-8 pb-7">
+          <Button onClick={dismiss} size="lg" className="w-full">
             {locale === 'ar' ? 'فهمت، شكراً! 👍' : "Got it, thanks! 👍"}
           </Button>
         </div>
+
       </div>
     </div>
   );
