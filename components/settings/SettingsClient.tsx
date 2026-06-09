@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Image from 'next/image';
-import { Upload, Scissors, Check, Clock, Briefcase, Plus, Trash2 } from 'lucide-react';
+import { Upload, Scissors, Check, Clock, Briefcase, Plus, Trash2, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
@@ -93,6 +93,33 @@ export function SettingsClient({ shop }: Props) {
     } catch { }
   }, []);
   const [newPosition, setNewPosition] = useState('');
+
+  // ── Change Password ─────────────────────────────────────────────────────
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  async function handleChangePassword() {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error(locale === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error(locale === 'ar' ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match');
+      return;
+    }
+    setChangingPassword(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      toast.error(locale === 'ar' ? 'فشل تغيير كلمة المرور' : 'Failed to change password');
+    } else {
+      toast.success(locale === 'ar' ? 'تم تغيير كلمة المرور بنجاح' : 'Password changed successfully');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+    setChangingPassword(false);
+  }
 
   function addPosition() {
     const trimmed = newPosition.trim();
@@ -408,6 +435,48 @@ export function SettingsClient({ shop }: Props) {
             </Button>
           </div>
         </div>
+
+        {/* ── Change Password ──────────────────────────────────────────── */}
+        {!DEMO_MODE && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <KeyRound className="w-5 h-5 text-gray-400" />
+              <h3 className="font-semibold text-gray-800">
+                {locale === 'ar' ? 'تغيير كلمة المرور' : 'Change Password'}
+              </h3>
+            </div>
+            <p className="text-sm text-gray-400 mb-5">
+              {locale === 'ar'
+                ? 'تغيير كلمة مرور حسابك الحالي'
+                : 'Change the password for your current account'}
+            </p>
+            <div className="space-y-3">
+              <Input
+                label={locale === 'ar' ? 'كلمة المرور الجديدة' : 'New Password'}
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <Input
+                label={locale === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm Password'}
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+              <Button
+                variant="outline"
+                onClick={handleChangePassword}
+                disabled={changingPassword}
+                className="w-full"
+              >
+                <KeyRound className="w-4 h-4" />
+                {changingPassword
+                  ? (locale === 'ar' ? 'جارٍ التغيير...' : 'Changing...')
+                  : (locale === 'ar' ? 'تغيير كلمة المرور' : 'Change Password')}
+              </Button>
+            </div>
+          </div>
+        )}
 
         <Button onClick={handleSave} disabled={saving} size="lg" className="w-full">
           {saving ? tCommon('loading') : t('saveSettings')}
