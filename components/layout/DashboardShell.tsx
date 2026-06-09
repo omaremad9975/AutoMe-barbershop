@@ -5,6 +5,7 @@ import { useLocale } from 'next-intl';
 import type { Shop, User } from '@/lib/types';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { WhatsNewModal } from './WhatsNewModal';
 
 interface Props {
   shop: Shop;
@@ -43,6 +44,8 @@ export function DashboardShell({ shop, currentUser, children }: Props) {
           {children}
         </main>
       </div>
+
+      <WhatsNewModal />
     </div>
   );
 }
