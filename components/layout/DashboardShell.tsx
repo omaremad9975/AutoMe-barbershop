@@ -24,6 +24,11 @@ export function DashboardShell({ shop, currentUser, children }: Props) {
     // #10 — apply saved theme
     const saved = localStorage.getItem('barber-theme') ?? 'default';
     document.documentElement.setAttribute('data-theme', saved);
+
+    // Record shift start time if not already set for this session
+    if (!localStorage.getItem('shift-start-time')) {
+      localStorage.setItem('shift-start-time', new Date().toISOString());
+    }
   }, [shop.brand_color]);
 
   return (

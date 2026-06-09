@@ -42,10 +42,15 @@ function detectCurrentShift(shifts: ShiftConfig[]): ShiftConfig | null {
   return shifts[0] ?? null; // fallback to first shift
 }
 
-/** Filter invoices by today's LOCAL date — show all of today's invoices for the shift summary */
-function filterInvoicesForShift(invoices: Invoice[], _shift: ShiftConfig): Invoice[] {
-  const todayStr = new Date().toDateString();
-  return invoices.filter((inv) => new Date(inv.created_at).toDateString() === todayStr);
+/** Filter invoices from shift start time (when cashier logged in) until now */
+function filterInvoicesForShift(invoices: Invoice[]): Invoice[] {
+  const shiftStart = localStorage.getItem('shift-start-time');
+  if (!shiftStart) {
+    const todayStr = new Date().toDateString();
+    return invoices.filter((inv) => new Date(inv.created_at).toDateString() === todayStr);
+  }
+  const startTime = new Date(shiftStart);
+  return invoices.filter((inv) => new Date(inv.created_at) >= startTime);
 }
 
 /** Read shift settings from localStorage */
@@ -91,20 +96,17 @@ export function ShiftSummaryModal({ open, onClose, cashierName }: Props) {
       return;
     }
 
-    // Non-demo: fetch from Supabase
-    // Use local midnight boundaries (not UTC) so Cairo invoices aren't missed
+    // Non-demo: fetch from Supabase — use shift start time (when cashier logged in)
+    const shiftStart = localStorage.getItem('shift-start-time') ?? new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
     const now = new Date();
-    const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-    const todayStart = localStart.toISOString();
-    const todayEnd = localEnd.toISOString();
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
 
     const supabase = createClient();
     supabase
       .from('invoices')
       .select('*, employee:employees(id, name)')
       .eq('status', 'paid')
-      .gte('created_at', todayStart)
+      .gte('created_at', shiftStart)
       .lte('created_at', todayEnd)
       .order('created_at')
       .then(({ data }) => {
@@ -125,9 +127,8 @@ export function ShiftSummaryModal({ open, onClose, cashierName }: Props) {
       currentShift = { id: 1, name: locale === 'ar' ? 'اليوم كامل' : 'Full Day', start_time: '00:00', end_time: '23:59' };
     }
 
-    // Filter invoices to the current shift window
-    const activeShift = currentShift ?? { id: 1, name: 'Full Day', start_time: '00:00', end_time: '23:59' };
-    const shiftInvoices = filterInvoicesForShift(invoices, activeShift);
+    // Filter invoices to this session's shift window
+    const shiftInvoices = filterInvoicesForShift(invoices);
 
     // Revenue by payment method
     const revenueByMethod: Record<PaymentMethod, { amount: number; count: number }> = {
@@ -182,7 +183,17 @@ export function ShiftSummaryModal({ open, onClose, cashierName }: Props) {
         const m = now.getMonth() + 1;
         const y = now.getFullYear();
         const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-        return `${d}/${m}/${y}, ${time}`;
+        return `${time} , ${d}/${m}/${y}`;
+      })(),
+      shiftSessionStart: (() => {
+        const raw = localStorage.getItem('shift-start-time');
+        if (!raw) return null;
+        const d = new Date(raw);
+        return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      })(),
+      shiftSessionEnd: (() => {
+        const now = new Date();
+        return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       })(),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,8 +208,12 @@ export function ShiftSummaryModal({ open, onClose, cashierName }: Props) {
     const d = now.getDate();
     const m = now.getMonth() + 1;
     const y = now.getFullYear();
-    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    const printTitle = `${d}-${m}-${y} ${time} Shift Summary`;
+    const h = String(now.getHours() % 12 || 12).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
+    const printTitle = `${d}-${m}-${y} ${h}-${min} ${ampm} Shift Summary`;
+    // Reset shift start time — new shift begins after closing
+    localStorage.setItem('shift-start-time', new Date().toISOString());
     printWindow.document.write(`
       <html dir="${isRTL ? 'rtl' : 'ltr'}">
         <head>
@@ -407,6 +422,8 @@ interface SummaryData {
   topEmployee: { name: string; count: number } | null;
   date: string;
   dateShort: string;
+  shiftSessionStart: string | null;
+  shiftSessionEnd: string;
 }
 
 function PrintLayout({
@@ -429,9 +446,11 @@ function PrintLayout({
         <p style={{ color: '#555' }}>{summary.currentShift?.name}</p>
         <p style={{ color: '#555' }}>{summary.date}</p>
         <p style={{ color: '#555' }}>{summary.dateShort}</p>
-        <p style={{ color: '#555' }}>
-          {summary.currentShift?.start_time} – {summary.currentShift?.end_time}
-        </p>
+        {summary.shiftSessionStart && (
+          <p style={{ color: '#555' }}>
+            {summary.shiftSessionStart} – {summary.shiftSessionEnd}
+          </p>
+        )}
         {cashierName && (
           <p style={{ color: '#555', marginTop: 4 }}>
             {locale === 'ar' ? 'الكاشير: ' : 'Cashier: '}<strong>{cashierName}</strong>
