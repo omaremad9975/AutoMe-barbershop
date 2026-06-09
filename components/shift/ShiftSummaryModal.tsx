@@ -174,9 +174,12 @@ export function ShiftSummaryModal({ open, onClose, cashierName }: Props) {
       grossTotal,
       netTotal,
       topEmployee,
-      date: new Date().toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-      }),
+      date: (() => {
+        const d = new Date().toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB', {
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        });
+        return locale === 'ar' ? d.replace('،', ' ،') : d;
+      })(),
       dateShort: (() => {
         const now = new Date();
         const d = now.getDate();
@@ -445,9 +448,9 @@ function PrintLayout({
         <p style={{ fontWeight: 700, fontSize: 16 }}>{t('title')}</p>
         <p style={{ color: '#555' }}>{summary.currentShift?.name}</p>
         <p style={{ color: '#555' }}>{summary.date}</p>
-        <p style={{ color: '#555' }}>{summary.dateShort}</p>
+        <p style={{ color: '#555', direction: 'ltr', unicodeBidi: 'embed' }}>{summary.dateShort}</p>
         {summary.shiftSessionStart && (
-          <p style={{ color: '#555' }}>
+          <p style={{ color: '#555', direction: 'ltr', unicodeBidi: 'embed' }}>
             {summary.shiftSessionStart} – {summary.shiftSessionEnd}
           </p>
         )}
