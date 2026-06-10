@@ -2,7 +2,7 @@ export type Role = 'owner' | 'cashier';
 export type AppointmentStatus = 'pending' | 'confirmed' | 'done' | 'cancelled';
 export type PaymentMethod = 'cash' | 'card' | 'instapay' | 'vodafone_cash';
 export type InvoiceStatus = 'paid' | 'void';
-export type ExpenseCategory = 'rent' | 'supplies' | 'electricity' | 'salaries' | 'maintenance' | 'other';
+export type ExpenseCategory = 'rent' | 'supplies' | 'electricity' | 'salaries' | 'maintenance' | 'other' | (string & {});
 
 export interface Shop {
   id: string;

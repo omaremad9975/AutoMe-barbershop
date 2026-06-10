@@ -35,7 +35,7 @@ const STATUS_BADGE: Record<AppointmentStatus, { variant: 'yellow' | 'blue' | 'gr
   cancelled: { variant: 'red', label: { ar: 'ملغي', en: 'Cancelled' } },
 };
 
-const STATUSES: AppointmentStatus[] = ['pending', 'confirmed', 'done', 'cancelled'];
+const STATUSES: AppointmentStatus[] = ['confirmed', 'done', 'cancelled'];
 
 const TIME_SLOTS = [
   '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -98,7 +98,7 @@ export function AppointmentsClient({
 
   const [form, setForm] = useState({
     client_id: '', employee_id: '', service_id: '',
-    time: '10:00', notes: '', status: 'pending' as AppointmentStatus,
+    time: '10:00', notes: '', status: 'confirmed' as AppointmentStatus,
   });
   const [formDate, setFormDate] = useState(initialDate);
   const [clientSearch, setClientSearch] = useState('');
@@ -209,7 +209,7 @@ export function AppointmentsClient({
       };
       setAppointments((prev) => [...prev, newAppt].sort((a, b) => a.time.localeCompare(b.time)));
       setShowNew(false);
-      setForm({ client_id: '', employee_id: '', service_id: '', time: '10:00', notes: '', status: 'pending' });
+      setForm({ client_id: '', employee_id: '', service_id: '', time: '10:00', notes: '', status: 'confirmed' });
       setClientSearch('');
       toast.success(tCommon('success'));
       setSaving(false);
@@ -237,7 +237,7 @@ export function AppointmentsClient({
     } else {
       setAppointments((prev) => [...prev, data as Appointment].sort((a, b) => a.time.localeCompare(b.time)));
       setShowNew(false);
-      setForm({ client_id: '', employee_id: '', service_id: '', time: '10:00', notes: '', status: 'pending' });
+      setForm({ client_id: '', employee_id: '', service_id: '', time: '10:00', notes: '', status: 'confirmed' });
       setClientSearch('');
       toast.success(tCommon('success'));
     }

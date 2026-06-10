@@ -263,12 +263,29 @@ export function SettingsClient({ shop }: Props) {
                 <Scissors className="w-8 h-8 text-gray-300" />
               )}
             </div>
-            <div>
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                <Upload className="w-4 h-4" />
-                {uploading ? '...' : t('uploadLogo')}
-              </Button>
-              <p className="text-xs text-gray-400 mt-1.5">{t('logoHint')}</p>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                  <Upload className="w-4 h-4" />
+                  {uploading ? '...' : t('uploadLogo')}
+                </Button>
+                {logoUrl && (
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (DEMO_MODE) { setLogoUrl(''); return; }
+                      const supabase = createClient();
+                      await supabase.from('shops').update({ logo_url: null }).eq('id', shop.id);
+                      setLogoUrl('');
+                      toast.success(locale === 'ar' ? 'تم استعادة الشعار الافتراضي' : 'Default logo restored');
+                    }}
+                  >
+                    <Scissors className="w-4 h-4" />
+                    {locale === 'ar' ? 'الشعار الافتراضي' : 'Default Logo'}
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-gray-400">{t('logoHint')}</p>
               <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.svg" className="hidden" onChange={handleLogoUpload} />
             </div>
           </div>
@@ -480,18 +497,21 @@ export function SettingsClient({ shop }: Props) {
                 label={locale === 'ar' ? 'كلمة المرور الحالية' : 'Current Password'}
                 type="password"
                 value={oldPassword}
+                autoComplete="new-password"
                 onChange={(e) => setOldPassword(e.target.value)}
               />
               <Input
                 label={locale === 'ar' ? 'كلمة المرور الجديدة' : 'New Password'}
                 type="password"
                 value={newPassword}
+                autoComplete="new-password"
                 onChange={(e) => setNewPassword(e.target.value)}
               />
               <Input
                 label={locale === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm Password'}
                 type="password"
                 value={confirmPassword}
+                autoComplete="new-password"
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
               <Button
