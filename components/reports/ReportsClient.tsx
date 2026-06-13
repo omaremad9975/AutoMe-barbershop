@@ -87,7 +87,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  function buildExportRows() {
+  function buildExportRows(displayedInvoices: typeof invoices) {
     return displayedInvoices.map((inv, i) => {
       const dateObj = new Date(inv.created_at);
       const hours = String(dateObj.getHours()).padStart(2, '0');
@@ -111,7 +111,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
   async function exportExcel() {
     setShowExportMenu(false);
     const { utils, writeFile } = await import('xlsx');
-    const rows = buildExportRows();
+    const rows = buildExportRows(invoices);
     const ws = utils.json_to_sheet(rows);
     const wb = utils.book_new();
     utils.book_append_sheet(wb, ws, locale === 'ar' ? 'التقارير' : 'Reports');
@@ -122,7 +122,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
     setShowExportMenu(false);
     const { default: jsPDF } = await import('jspdf');
     const { default: autoTable } = await import('jspdf-autotable');
-    const rows = buildExportRows();
+    const rows = buildExportRows(invoices);
     const headers = Object.keys(rows[0] ?? {});
     const doc = new jsPDF({ orientation: 'landscape' });
     doc.setFontSize(14);
