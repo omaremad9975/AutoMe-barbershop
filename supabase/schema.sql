@@ -166,6 +166,22 @@ create table public.invoice_items (
 alter table public.invoice_items enable row level security;
 
 -- ============================================================
+-- EXPENSES
+-- ============================================================
+create table public.expenses (
+  id               uuid primary key default uuid_generate_v4(),
+  shop_id          uuid not null references public.shops(id) on delete cascade,
+  amount           numeric(10,2) not null,
+  category         text not null,
+  notes            text,
+  date             date not null default current_date,
+  created_at       timestamptz not null default now(),
+  created_by_name  text
+);
+
+alter table public.expenses enable row level security;
+
+-- ============================================================
 -- HELPER FUNCTION: get_my_shop_id()
 -- Returns the shop_id for the currently authenticated user
 -- ============================================================
@@ -196,6 +212,12 @@ $$;
 -- ============================================================
 -- RLS POLICIES
 -- ============================================================
+
+-- EXPENSES
+create policy "expenses: read own shop"   on public.expenses for select using (shop_id = public.get_my_shop_id());
+create policy "expenses: insert own shop" on public.expenses for insert with check (shop_id = public.get_my_shop_id());
+create policy "expenses: update own shop" on public.expenses for update using (shop_id = public.get_my_shop_id());
+create policy "expenses: delete own shop" on public.expenses for delete using (shop_id = public.get_my_shop_id());
 
 -- PRODUCTS
 create policy "products: read own shop"    on public.products for select using (shop_id = public.get_my_shop_id());

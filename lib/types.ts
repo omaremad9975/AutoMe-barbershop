@@ -31,6 +31,7 @@ export interface Client {
   whatsapp: string | null;
   email: string | null;
   notes: string | null;
+  send_digital_invoice?: boolean;
   created_at: string;
 }
 

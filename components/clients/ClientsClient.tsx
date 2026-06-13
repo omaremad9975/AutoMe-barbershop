@@ -20,7 +20,7 @@ interface Props {
   initialClients: Client[];
 }
 
-const EMPTY_FORM = { name: '', phone: '', email: '', notes: '', code: '' };
+const EMPTY_FORM = { name: '', phone: '', email: '', notes: '', code: '', sendDigitalInvoice: false };
 
 export function ClientsClient({ initialClients }: Props) {
   const t = useTranslations('clients');
@@ -99,7 +99,7 @@ export function ClientsClient({ initialClients }: Props) {
   }
 
   function openEdit(c: Client) {
-    setForm({ name: c.name, phone: c.phone ?? c.whatsapp ?? '', email: c.email ?? '', notes: c.notes ?? '', code: String(c.code ?? '') });
+    setForm({ name: c.name, phone: c.phone ?? c.whatsapp ?? '', email: c.email ?? '', notes: c.notes ?? '', code: String(c.code ?? ''), sendDigitalInvoice: c.send_digital_invoice ?? false });
     setEditingId(c.id);
     setFieldErrors({});
     setShowForm(true);
@@ -197,7 +197,7 @@ export function ClientsClient({ initialClients }: Props) {
     if (editingId) {
       const { error } = await supabase
         .from('clients')
-        .update({ name: form.name.trim(), phone: form.phone || null, whatsapp: form.phone || null, email: form.email || null, notes: form.notes || null })
+        .update({ name: form.name.trim(), phone: form.phone || null, whatsapp: form.phone || null, email: form.email || null, notes: form.notes || null, send_digital_invoice: form.email ? form.sendDigitalInvoice : false })
         .eq('id', editingId);
 
       if (!error) {
@@ -207,7 +207,8 @@ export function ClientsClient({ initialClients }: Props) {
           phone: form.phone || null,
           whatsapp: form.phone || null,
           email: form.email || null,
-          notes: form.notes || null
+          notes: form.notes || null,
+          send_digital_invoice: form.email ? form.sendDigitalInvoice : false
         } : c));
         toast.success(tCommon('success'));
         setShowForm(false);
@@ -224,7 +225,8 @@ export function ClientsClient({ initialClients }: Props) {
           whatsapp: form.phone || null,
           email: form.email || null,
           notes: form.notes || null,
-          code: clientCode
+          code: clientCode,
+          send_digital_invoice: form.email ? form.sendDigitalInvoice : false
         })
         .select()
         .single<Client>();
@@ -386,6 +388,31 @@ export function ClientsClient({ initialClients }: Props) {
             error={fieldErrors.phone}
           />
           <Input label={`${t('email')} (${locale === 'ar' ? 'اختياري' : 'optional'})`} value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} type="email" error={fieldErrors.email} />
+
+          {/* Send Digital Invoice toggle */}
+          <div className={`flex items-center justify-between px-4 py-3 rounded-xl border transition ${form.email ? 'border-gray-200 bg-gray-50' : 'border-gray-100 bg-gray-50 opacity-50'}`}>
+            <div>
+              <p className="text-sm font-medium text-gray-700">
+                {locale === 'ar' ? 'إرسال فاتورة رقمية' : 'Send Digital Invoice'}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {locale === 'ar'
+                  ? (form.email ? 'سيتم إرسال الفاتورة على البريد الإلكتروني' : 'أدخل البريد الإلكتروني أولاً')
+                  : (form.email ? 'Invoice will be sent to their email' : 'Enter email first to enable')}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={!form.email}
+              onClick={() => form.email && setForm((f) => ({ ...f, sendDigitalInvoice: !f.sendDigitalInvoice }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${form.sendDigitalInvoice && form.email ? 'bg-blue-600' : 'bg-gray-300'}`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.sendDigitalInvoice && form.email ? (locale === 'ar' ? '-translate-x-6' : 'translate-x-6') : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
+
           {editingId ? (
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-1">

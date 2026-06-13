@@ -197,7 +197,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
             {showFromPicker && (
               <>
                 <div className="fixed inset-0 z-[150]" onClick={() => setShowFromPicker(false)} />
-                <div className="absolute left-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]">
+                <div className="absolute start-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]" dir="ltr">
                   <DayPicker
                     mode="single"
                     selected={fromDate}
@@ -328,6 +328,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
           {/* Daily sales */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 lg:col-span-2">
             <h3 className="font-semibold text-gray-800 mb-4">{t('dailySales')}</h3>
+            <div dir="ltr">
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={dailyData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -353,13 +354,14 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
                 <Bar dataKey="total" fill="var(--brand-color)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Payment method pie */}
           <div className="bg-white rounded-2xl border border-gray-200 p-10">
             <h3 className="font-semibold text-gray-800 mb-4">{t('revenueByPayment')}</h3>
             {paymentData.length > 0 ? (
-              <div style={{ overflow: 'visible' }}>
+              <div style={{ overflow: 'visible' }} dir="ltr">
                 <ResponsiveContainer width="100%" height={380}>
                   <PieChart margin={{ top: 20, bottom: 20, left: 20, right: 20 }}>
                     <Pie
@@ -414,6 +416,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
           <div className="bg-white rounded-2xl border border-gray-200 p-5 lg:col-span-2">
             <h3 className="font-semibold text-gray-800 mb-4">{t('popularServices')}</h3>
             {serviceData.length > 0 ? (
+              <div dir="ltr">
               <ResponsiveContainer width="100%" height={Math.max(220, serviceData.length * 36)}>
                 <BarChart
                   data={serviceData}
@@ -432,6 +435,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
                   <Bar dataKey="count" fill="var(--brand-color)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+              </div>
             ) : <p className="text-gray-400 text-sm">{t('noData')}</p>}
           </div>
         </div>
