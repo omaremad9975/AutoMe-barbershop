@@ -410,3 +410,9 @@ export function POSClient({ initialClients, initialServices, initialEmployees, i
         open={showQuickAdd}
         onClose={() => setShowQuickAdd(false)}
         onCreated={(client) => { setClients((prev) => [client, ...prev]); selectClient(client); setShowQuickAdd(false); }}
+        shopId={shop?.id ?? ''}
+        clients={clients}
+      />
+    </>
+  );
+}
