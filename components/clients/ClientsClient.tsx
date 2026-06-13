@@ -92,7 +92,7 @@ export function ClientsClient({ initialClients }: Props) {
 
   function openNew() {
     const maxCode = clients.reduce((max, c) => (c.code != null && c.code > max ? c.code : max), 0);
-    setForm({ name: '', phone: '', email: '', notes: '', code: String(maxCode + 1) });
+    setForm({ name: '', phone: '', email: '', notes: '', code: String(maxCode + 1), sendDigitalInvoice: false });
     setEditingId(null);
     setFieldErrors({});
     setShowForm(true);
