@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -12,8 +12,8 @@ import { format, parse, isValid } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { formatCurrency, getPaymentMethodLabel, formatTime12h } from '@/lib/utils';
-import { TrendingUp, LayoutList, Search, X } from 'lucide-react';
+import { formatCurrency, getPaymentMethodLabel, formatTime12h, generateInvoiceNumber } from '@/lib/utils';
+import { TrendingUp, LayoutList, Search, X, Download, ChevronDown } from 'lucide-react';
 import { DEMO_INVOICES } from '@/lib/demo/data';
 import type { Invoice } from '@/lib/types';
 
@@ -64,6 +64,79 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'charts' | 'list'>('charts');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  const fromPickerRef = useRef<HTMLDivElement>(null);
+  const toPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (fromPickerRef.current && !fromPickerRef.current.contains(e.target as Node)) {
+        setShowFromPicker(false);
+      }
+      if (toPickerRef.current && !toPickerRef.current.contains(e.target as Node)) {
+        setShowToPicker(false);
+      }
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function buildExportRows() {
+    return displayedInvoices.map((inv, i) => {
+      const dateObj = new Date(inv.created_at);
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      return {
+        [locale === 'ar' ? 'رقم الفاتورة' : 'Invoice No.']: generateInvoiceNumber(inv.id),
+        [locale === 'ar' ? 'كود العميل' : 'Client Code']: inv.client?.code != null ? `#${inv.client.code}` : '—',
+        [locale === 'ar' ? 'العميل' : 'Client Name']: inv.client?.name ?? (locale === 'ar' ? 'زبون عابر' : 'Walk-in'),
+        [locale === 'ar' ? 'الهاتف' : 'Phone']: inv.client?.phone ?? '—',
+        [locale === 'ar' ? 'التاريخ' : 'Date']: format(dateObj, 'dd/MM/yyyy'),
+        [locale === 'ar' ? 'الوقت' : 'Time']: `${hours}:${minutes}`,
+        [locale === 'ar' ? 'البريد الإلكتروني' : 'Email']: inv.client?.email ?? '—',
+        [locale === 'ar' ? 'المبلغ' : 'Amount']: inv.total,
+        [locale === 'ar' ? 'الخصم' : 'Discount']: inv.discount,
+        [locale === 'ar' ? 'الصافي' : 'Net Total']: inv.net_total,
+        [locale === 'ar' ? 'طريقة الدفع' : 'Payment Method']: getPaymentMethodLabel(inv.payment_method, locale),
+      };
+    });
+  }
+
+  async function exportExcel() {
+    setShowExportMenu(false);
+    const { utils, writeFile } = await import('xlsx');
+    const rows = buildExportRows();
+    const ws = utils.json_to_sheet(rows);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, locale === 'ar' ? 'التقارير' : 'Reports');
+    writeFile(wb, `reports-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  }
+
+  async function exportPDF() {
+    setShowExportMenu(false);
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+    const rows = buildExportRows();
+    const headers = Object.keys(rows[0] ?? {});
+    const doc = new jsPDF({ orientation: 'landscape' });
+    doc.setFontSize(14);
+    doc.text(locale === 'ar' ? 'تقرير المبيعات' : 'Sales Report', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`${fromInput} → ${toInput}`, 14, 22);
+    autoTable(doc, {
+      head: [headers],
+      body: rows.map(r => Object.values(r).map(String)),
+      startY: 27,
+      styles: { fontSize: 8 },
+    });
+    doc.save(`reports-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  }
 
   const handleFromSelect = (date: Date | undefined) => {
     if (date) {
@@ -175,7 +248,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
         <div className="flex flex-wrap items-end gap-3">
 
           {/* From date */}
-          <div className="relative">
+          <div className="relative" ref={fromPickerRef}>
             <label className="block text-xs font-medium text-gray-500 mb-1">
               {locale === 'ar' ? 'من' : 'From'}
             </label>
@@ -195,16 +268,13 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
             />
             <p className="text-xs text-gray-400 mt-1">DD/MM/YYYY</p>
             {showFromPicker && (
-              <>
-                <div className="fixed inset-0 z-[150]" onClick={() => setShowFromPicker(false)} />
-                <div className="absolute start-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]" dir="ltr">
-                  <DayPicker
-                    mode="single"
-                    selected={fromDate}
-                    onSelect={handleFromSelect}
-                  />
-                </div>
-              </>
+              <div className="absolute start-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]" dir="ltr">
+                <DayPicker
+                  mode="single"
+                  selected={fromDate}
+                  onSelect={handleFromSelect}
+                />
+              </div>
             )}
           </div>
 
@@ -224,7 +294,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
 
 
           {/* To date */}
-          <div className="relative">
+          <div className="relative" ref={toPickerRef}>
             <label className="block text-xs font-medium text-gray-500 mb-1">
               {locale === 'ar' ? 'إلى' : 'To'}
             </label>
@@ -244,16 +314,13 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
             />
             <p className="text-xs text-gray-400 mt-1">DD/MM/YYYY</p>
             {showToPicker && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowToPicker(false)} />
-                <div className="absolute left-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-20">
-                  <DayPicker
-                    mode="single"
-                    selected={toDate}
-                    onSelect={handleToSelect}
-                  />
-                </div>
-              </>
+              <div className="absolute start-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]" dir="ltr">
+                <DayPicker
+                  mode="single"
+                  selected={toDate}
+                  onSelect={handleToSelect}
+                />
+              </div>
             )}
           </div>
 
@@ -281,7 +348,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
         </div>
       </div>
 
-      {/* View Toggle */}
+      {/* View Toggle + Export */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex rounded-xl border border-gray-200 overflow-hidden bg-white p-1 shadow-sm">
           <button
@@ -302,6 +369,30 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
             <LayoutList className="w-4 h-4" />
             {locale === 'ar' ? 'قائمة الفواتير' : 'List'}
           </button>
+        </div>
+
+        {/* Export dropdown */}
+        <div className="relative" ref={exportMenuRef}>
+          <button
+            onClick={() => setShowExportMenu(v => !v)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm"
+          >
+            <Download className="w-4 h-4" />
+            {locale === 'ar' ? 'تصدير' : 'Export'}
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+          </button>
+          {showExportMenu && (
+            <div className="absolute end-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-[200] overflow-hidden">
+              <button onClick={exportExcel} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition">
+                <span className="text-green-600 font-bold text-xs">XLS</span>
+                {locale === 'ar' ? 'تصدير كـ Excel' : 'Export as Excel'}
+              </button>
+              <button onClick={exportPDF} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition border-t border-gray-100">
+                <span className="text-red-600 font-bold text-xs">PDF</span>
+                {locale === 'ar' ? 'تصدير كـ PDF' : 'Export as PDF'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -447,7 +538,9 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
             const q = searchTerm.toLowerCase();
             const clientName = inv.client?.name?.toLowerCase() ?? '';
             const clientPhone = inv.client?.phone ?? '';
-            return clientName.includes(q) || clientPhone.includes(q);
+            const invoiceNo = generateInvoiceNumber(inv.id).toLowerCase();
+            const clientCode = inv.client?.code != null ? String(inv.client.code) : '';
+            return clientName.includes(q) || clientPhone.includes(q) || invoiceNo.includes(q) || clientCode.includes(q);
           });
 
           return (
@@ -459,7 +552,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={locale === 'ar' ? 'البحث باسم العميل أو الهاتف...' : 'Search by client name or phone...'}
+                  placeholder={locale === 'ar' ? 'البحث باسم العميل أو الهاتف أو رقم الفاتورة...' : 'Search by name, phone or invoice no...'}
                   className="w-full ps-9 pe-8 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 />
                 {searchTerm && (
@@ -483,7 +576,10 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'الكود' : 'Code'}
+                            {locale === 'ar' ? 'رقم الفاتورة' : 'Invoice No.'}
+                          </th>
+                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
+                            {locale === 'ar' ? 'كود العميل' : 'Client Code'}
                           </th>
                           <th className="text-start px-4 py-3 font-semibold text-gray-600">
                             {locale === 'ar' ? 'العميل' : 'Client Name'}
@@ -535,8 +631,15 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
 
                           return (
                             <tr key={inv.id} className="hover:bg-gray-50 transition">
-                              <td className="px-4 py-3 font-medium text-gray-500 whitespace-nowrap">
-                                #{originalIndex + 1}
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className="font-mono text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                                  {generateInvoiceNumber(inv.id)}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                {inv.client?.code != null
+                                  ? <span className="font-mono text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">#{inv.client.code}</span>
+                                  : <span className="text-gray-300">—</span>}
                               </td>
                               <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">
                                 {inv.client?.name ?? (locale === 'ar' ? 'زبون عابر' : 'Walk-in')}

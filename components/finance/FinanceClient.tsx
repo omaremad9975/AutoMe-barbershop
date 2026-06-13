@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { TrendingUp, TrendingDown, Wallet, Plus, Trash2, AlertCircle, Tag } from 'lucide-react';
 import { toast } from 'sonner';
@@ -68,6 +68,22 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
   const [fromTime, setFromTime] = useState('00:00');
   const [toTime,   setToTime]   = useState('23:59');
   const [loading, setLoading] = useState(false);
+
+  const fromPickerRef = useRef<HTMLDivElement>(null);
+  const toPickerRef   = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (fromPickerRef.current && !fromPickerRef.current.contains(e.target as Node)) {
+        setShowFromPicker(false);
+      }
+      if (toPickerRef.current && !toPickerRef.current.contains(e.target as Node)) {
+        setShowToPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // ── Data state ───────────────────────────────────────────────────────────
   // Single source of truth for whatever is currently displayed
@@ -285,7 +301,7 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
         <div className="flex flex-wrap items-end gap-3">
 
           {/* From date */}
-          <div className="relative">
+          <div className="relative" ref={fromPickerRef}>
             <label className="block text-xs font-medium text-gray-500 mb-1">
               {locale === 'ar' ? 'من' : 'From'}
             </label>
@@ -303,12 +319,9 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
             />
             <p className="text-xs text-gray-400 mt-1">DD/MM/YYYY</p>
             {showFromPicker && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowFromPicker(false)} />
-                <div className="absolute left-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-20">
-                  <DayPicker mode="single" selected={fromDate} onSelect={handleFromSelect} />
-                </div>
-              </>
+              <div className="absolute start-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]" dir="ltr">
+                <DayPicker mode="single" selected={fromDate} onSelect={handleFromSelect} />
+              </div>
             )}
           </div>
 
@@ -327,7 +340,7 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
           </div>
 
           {/* To date */}
-          <div className="relative">
+          <div className="relative" ref={toPickerRef}>
             <label className="block text-xs font-medium text-gray-500 mb-1">
               {locale === 'ar' ? 'إلى' : 'To'}
             </label>
@@ -345,12 +358,9 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
             />
             <p className="text-xs text-gray-400 mt-1">DD/MM/YYYY</p>
             {showToPicker && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowToPicker(false)} />
-                <div className="absolute left-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-20">
-                  <DayPicker mode="single" selected={toDate} onSelect={handleToSelect} />
-                </div>
-              </>
+              <div className="absolute start-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]" dir="ltr">
+                <DayPicker mode="single" selected={toDate} onSelect={handleToSelect} />
+              </div>
             )}
           </div>
 
