@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations, useLocale } from 'next-intl';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -68,15 +69,36 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
+  // Portal-based calendar: refs for inputs + portal divs
+  const fromInputRef = useRef<HTMLInputElement>(null);
+  const toInputRef   = useRef<HTMLInputElement>(null);
   const fromPickerRef = useRef<HTMLDivElement>(null);
-  const toPickerRef = useRef<HTMLDivElement>(null);
+  const toPickerRef   = useRef<HTMLDivElement>(null);
+  const [fromCalPos, setFromCalPos] = useState<{ top: number; left: number } | null>(null);
+  const [toCalPos,   setToCalPos]   = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  const openFromPicker = useCallback(() => {
+    const r = fromInputRef.current?.getBoundingClientRect();
+    if (r) setFromCalPos({ top: r.bottom + 4, left: Math.max(8, r.right - 300) });
+    setShowFromPicker(true);
+  }, []);
+
+  const openToPicker = useCallback(() => {
+    const r = toInputRef.current?.getBoundingClientRect();
+    if (r) setToCalPos({ top: r.bottom + 4, left: Math.max(8, r.right - 300) });
+    setShowToPicker(true);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (fromPickerRef.current && !fromPickerRef.current.contains(e.target as Node)) {
+      if (showFromPicker && fromPickerRef.current && !fromPickerRef.current.contains(e.target as Node) &&
+          fromInputRef.current && !fromInputRef.current.contains(e.target as Node)) {
         setShowFromPicker(false);
       }
-      if (toPickerRef.current && !toPickerRef.current.contains(e.target as Node)) {
+      if (showToPicker && toPickerRef.current && !toPickerRef.current.contains(e.target as Node) &&
+          toInputRef.current && !toInputRef.current.contains(e.target as Node)) {
         setShowToPicker(false);
       }
       if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
@@ -85,7 +107,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [showFromPicker, showToPicker]);
 
   function buildExportRows(displayedInvoices: typeof invoices) {
     return displayedInvoices.map((inv, i) => {
@@ -248,34 +270,24 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
         <div className="flex flex-wrap items-end gap-3">
 
           {/* From date */}
-          <div className="relative" ref={fromPickerRef}>
+          <div className="relative">
             <label className="block text-xs font-medium text-gray-500 mb-1">
               {locale === 'ar' ? 'من' : 'From'}
             </label>
             <input
+              ref={fromInputRef}
               type="text"
               value={fromInput}
               onChange={(e) => {
                 const val = e.target.value;
                 setFromInput(val);
                 const parsed = parse(val, 'dd/MM/yyyy', new Date());
-                if (isValid(parsed)) {
-                  setFromDate(parsed);
-                }
+                if (isValid(parsed)) setFromDate(parsed);
               }}
-              onFocus={() => setShowFromPicker(true)}
+              onFocus={openFromPicker}
               className="w-36 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             />
             <p className="text-xs text-gray-400 mt-1">DD/MM/YYYY</p>
-            {showFromPicker && (
-              <div className="absolute start-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]" dir="ltr">
-                <DayPicker
-                  mode="single"
-                  selected={fromDate}
-                  onSelect={handleFromSelect}
-                />
-              </div>
-            )}
           </div>
 
           {/* From time */}
@@ -294,34 +306,24 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
 
 
           {/* To date */}
-          <div className="relative" ref={toPickerRef}>
+          <div className="relative">
             <label className="block text-xs font-medium text-gray-500 mb-1">
               {locale === 'ar' ? 'إلى' : 'To'}
             </label>
             <input
+              ref={toInputRef}
               type="text"
               value={toInput}
               onChange={(e) => {
                 const val = e.target.value;
                 setToInput(val);
                 const parsed = parse(val, 'dd/MM/yyyy', new Date());
-                if (isValid(parsed)) {
-                  setToDate(parsed);
-                }
+                if (isValid(parsed)) setToDate(parsed);
               }}
-              onFocus={() => setShowToPicker(true)}
+              onFocus={openToPicker}
               className="w-36 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             />
             <p className="text-xs text-gray-400 mt-1">DD/MM/YYYY</p>
-            {showToPicker && (
-              <div className="absolute start-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]" dir="ltr">
-                <DayPicker
-                  mode="single"
-                  selected={toDate}
-                  onSelect={handleToSelect}
-                />
-              </div>
-            )}
           </div>
 
           {/* To time */}
@@ -681,6 +683,31 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
             </div>
           );
         })()
+      )}
+
+      {/* ── Calendar portals — rendered on document.body, outside RTL context ── */}
+      {mounted && showFromPicker && fromCalPos && createPortal(
+        <div
+          ref={fromPickerRef}
+          style={{ position: 'fixed', top: fromCalPos.top, left: fromCalPos.left, zIndex: 9999 }}
+          className="p-3 bg-white border border-gray-200 rounded-2xl shadow-xl"
+          dir="ltr"
+        >
+          <DayPicker mode="single" selected={fromDate} onSelect={handleFromSelect} />
+        </div>,
+        document.body
+      )}
+
+      {mounted && showToPicker && toCalPos && createPortal(
+        <div
+          ref={toPickerRef}
+          style={{ position: 'fixed', top: toCalPos.top, left: toCalPos.left, zIndex: 9999 }}
+          className="p-3 bg-white border border-gray-200 rounded-2xl shadow-xl"
+          dir="ltr"
+        >
+          <DayPicker mode="single" selected={toDate} onSelect={handleToSelect} />
+        </div>,
+        document.body
       )}
     </>
   );
