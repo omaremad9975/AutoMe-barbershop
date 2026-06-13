@@ -156,4 +156,7 @@ export interface Expense {
   amount: number;
   category: ExpenseCategory;
   notes: string | null;
-  date: string;         // "YY
+  date: string;         // "YYYY-MM-DD"
+  created_at: string;
+  created_by_name?: string | null;
+}
