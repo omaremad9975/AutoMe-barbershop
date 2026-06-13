@@ -391,8 +391,10 @@ export function POSClient({ initialClients, initialServices, initialEmployees, i
       <Modal open={showReceipt} onClose={resetPOS} title={t('receipt')} size="md">
         {savedInvoice && shop && (
           <div>
-            <Receipt invoice={savedInvoice} shop={shop} locale={locale} />
-            <div className="flex gap-3 mt-6">
+            <div className="receipt-print-area">
+              <Receipt invoice={savedInvoice} shop={shop} locale={locale} />
+            </div>
+            <div className="flex gap-3 mt-6 print:hidden">
               <Button variant="outline" onClick={() => window.print()} className="flex-1">
                 <Printer className="w-4 h-4" />{tCommon('print')}
               </Button>
@@ -408,9 +410,3 @@ export function POSClient({ initialClients, initialServices, initialEmployees, i
         open={showQuickAdd}
         onClose={() => setShowQuickAdd(false)}
         onCreated={(client) => { setClients((prev) => [client, ...prev]); selectClient(client); setShowQuickAdd(false); }}
-        shopId={shop?.id ?? ''}
-        clients={clients}
-      />
-    </>
-  );
-}

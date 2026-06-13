@@ -64,3 +64,17 @@
     scrollbar-color: #d1d5db transparent;
   }
 }
+
+/* ── Print: show only the receipt ────────────────────────── */
+@media print {
+  body * { visibility: hidden; }
+  .receipt-print-area,
+  .receipt-print-area * { visibility: visible; }
+  .receipt-print-area {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: 400px;
+  }
+}

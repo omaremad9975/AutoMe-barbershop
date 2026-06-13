@@ -142,22 +142,44 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
 
   async function exportPDF() {
     setShowExportMenu(false);
-    const { default: jsPDF } = await import('jspdf');
-    const { default: autoTable } = await import('jspdf-autotable');
+    if (invoices.length === 0) return;
     const rows = buildExportRows(invoices);
-    const headers = Object.keys(rows[0] ?? {});
-    const doc = new jsPDF({ orientation: 'landscape' });
-    doc.setFontSize(14);
-    doc.text(locale === 'ar' ? 'تقرير المبيعات' : 'Sales Report', 14, 15);
-    doc.setFontSize(10);
-    doc.text(`${fromInput} → ${toInput}`, 14, 22);
-    autoTable(doc, {
-      head: [headers],
-      body: rows.map(r => Object.values(r).map(String)),
-      startY: 27,
-      styles: { fontSize: 8 },
-    });
-    doc.save(`reports-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    const headers = Object.keys(rows[0]);
+    const isAr = locale === 'ar';
+    const tableRows = rows
+      .map(r => `<tr>${Object.values(r).map(v => `<td>${String(v)}</td>`).join('')}</tr>`)
+      .join('');
+    const html = `<!DOCTYPE html>
+<html dir="${isAr ? 'rtl' : 'ltr'}" lang="${locale}">
+<head>
+  <meta charset="UTF-8" />
+  <title>${isAr ? 'تقرير المبيعات' : 'Sales Report'}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 20px; }
+    h1 { font-size: 16px; margin-bottom: 4px; }
+    p { font-size: 11px; color: #666; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1a1a2e; color: #fff; padding: 7px 10px; text-align: ${isAr ? 'right' : 'left'}; font-weight: 600; }
+    td { padding: 5px 10px; border-bottom: 1px solid #e5e7eb; text-align: ${isAr ? 'right' : 'left'}; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <h1>${isAr ? 'تقرير المبيعات' : 'Sales Report'}</h1>
+  <p>${fromInput} — ${toInput}</p>
+  <table>
+    <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${tableRows}</tbody>
+  </table>
+  <script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`;
+    const win = window.open('', '_blank', 'width=1000,height=700');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
   }
 
   const handleFromSelect = (date: Date | undefined) => {
@@ -568,147 +590,4 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
               </div>
 
               <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                {displayedInvoices.length === 0 ? (
-                  <div className="text-center py-16 text-gray-400">
-                    {locale === 'ar' ? 'لا توجد فواتير مطابقة للبحث' : 'No matching invoices found'}
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-start">
-                      <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'رقم الفاتورة' : 'Invoice No.'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'كود العميل' : 'Client Code'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'العميل' : 'Client Name'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'الهاتف' : 'Phone'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'التاريخ' : 'Date'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'الوقت' : 'Time'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'البريد الإلكتروني' : 'Email'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'المبلغ' : 'Amount'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'الخصم' : 'Discount'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'الصافي' : 'Net Total'}
-                          </th>
-                          <th className="text-start px-4 py-3 font-semibold text-gray-600">
-                            {locale === 'ar' ? 'طريقة الدفع' : 'Payment Method'}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {displayedInvoices.map((inv) => {
-                          const originalIndex = invoices.indexOf(inv);
-                          const dateObj = new Date(inv.created_at);
-
-                          // Local time calculation
-                          const hours = String(dateObj.getHours()).padStart(2, '0');
-                          const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                          const timeStr = `${hours}:${minutes}`;
-                          const timeFormatted = formatTime12h(timeStr, locale);
-
-                          // Payment Badge Classes
-                          const badgeClasses = {
-                            cash: 'bg-green-50 text-green-700 border-green-200',
-                            card: 'bg-blue-50 text-blue-700 border-blue-200',
-                            instapay: 'bg-purple-50 text-purple-700 border-purple-200',
-                            vodafone_cash: 'bg-red-50 text-red-700 border-red-200',
-                          }[inv.payment_method] || 'bg-gray-50 text-gray-700 border-gray-200';
-
-                          return (
-                            <tr key={inv.id} className="hover:bg-gray-50 transition">
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <span className="font-mono text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
-                                  {generateInvoiceNumber(inv.id)}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                {inv.client?.code != null
-                                  ? <span className="font-mono text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">#{inv.client.code}</span>
-                                  : <span className="text-gray-300">—</span>}
-                              </td>
-                              <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">
-                                {inv.client?.name ?? (locale === 'ar' ? 'زبون عابر' : 'Walk-in')}
-                              </td>
-                              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                                {inv.client?.phone ?? '—'}
-                              </td>
-                              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                                {format(dateObj, 'dd/MM/yyyy')}
-                              </td>
-                              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                                {timeFormatted}
-                              </td>
-                              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                                {inv.client?.email ?? '—'}
-                              </td>
-                              <td className="px-4 py-3 text-gray-900 font-medium whitespace-nowrap">
-                                {formatCurrency(inv.total)}
-                              </td>
-                              <td className="px-4 py-3 text-red-600 whitespace-nowrap">
-                                {inv.discount > 0 ? formatCurrency(inv.discount) : '—'}
-                              </td>
-                              <td className="px-4 py-3 text-gray-900 font-bold whitespace-nowrap">
-                                {formatCurrency(inv.net_total)}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeClasses}`}>
-                                  {getPaymentMethodLabel(inv.payment_method, locale)}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })()
-      )}
-
-      {/* ── Calendar portals — rendered on document.body, outside RTL context ── */}
-      {mounted && showFromPicker && fromCalPos && createPortal(
-        <div
-          ref={fromPickerRef}
-          style={{ position: 'fixed', top: fromCalPos.top, left: fromCalPos.left, zIndex: 9999 }}
-          className="p-3 bg-white border border-gray-200 rounded-2xl shadow-xl"
-          dir="ltr"
-        >
-          <DayPicker mode="single" selected={fromDate} onSelect={handleFromSelect} />
-        </div>,
-        document.body
-      )}
-
-      {mounted && showToPicker && toCalPos && createPortal(
-        <div
-          ref={toPickerRef}
-          style={{ position: 'fixed', top: toCalPos.top, left: toCalPos.left, zIndex: 9999 }}
-          className="p-3 bg-white border border-gray-200 rounded-2xl shadow-xl"
-          dir="ltr"
-        >
-          <DayPicker mode="single" selected={toDate} onSelect={handleToSelect} />
-        </div>,
-        document.body
-      )}
-    </>
-  );
-}
+                {displayedInvo
