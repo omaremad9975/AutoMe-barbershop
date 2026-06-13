@@ -27,16 +27,14 @@ interface Props {
 
 const COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
 
-// #8 — custom Y-axis tick that truncates long names with a tooltip
+// #8 — custom Y-axis tick — shows full name, wraps if very long
 function ServiceTick({ x, y, payload }: any) {
-  const maxLen = 18;
   const name: string = payload.value ?? '';
-  const label = name.length > maxLen ? name.slice(0, maxLen) + '…' : name;
   return (
     <g transform={`translate(${x},${y})`}>
       <title>{name}</title>
-      <text x={-6} y={0} dy={4} textAnchor="end" fill="#6b7280" fontSize={11}>
-        {label}
+      <text x={-8} y={0} dy={4} textAnchor="end" fill="#6b7280" fontSize={12}>
+        {name}
       </text>
     </g>
   );
@@ -164,9 +162,9 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
   });
   const serviceData = Object.values(serviceMap).sort((a, b) => b.count - a.count).slice(0, 10);
 
-  // #8 — compute left margin based on longest service name
+  // compute Y-axis width based on longest service name (Arabic chars need more space)
   const maxNameLen = serviceData.reduce((max, s) => Math.max(max, s.name.length), 0);
-  const yAxisWidth = Math.min(200, Math.max(120, maxNameLen * 7));
+  const yAxisWidth = Math.min(250, Math.max(150, maxNameLen * 10));
 
   return (
     <>
@@ -198,8 +196,8 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
             <p className="text-xs text-gray-400 mt-1">DD/MM/YYYY</p>
             {showFromPicker && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowFromPicker(false)} />
-                <div className="absolute left-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-20">
+                <div className="fixed inset-0 z-[150]" onClick={() => setShowFromPicker(false)} />
+                <div className="absolute left-0 mt-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-[200]">
                   <DayPicker
                     mode="single"
                     selected={fromDate}
@@ -376,7 +374,7 @@ export function ReportsClient({ initialInvoices, defaultFrom, defaultTo }: Props
                     >
                       {paymentData.map((_, idx) => <Cell key={idx} fill={COLORS[idx % COLORS.length]} />)}
                     </Pie>
-                    <Legend />
+                    <Legend wrapperStyle={{ paddingTop: '24px' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

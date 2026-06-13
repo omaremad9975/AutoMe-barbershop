@@ -157,4 +157,5 @@ export interface Expense {
   notes: string | null;
   date: string;         // "YYYY-MM-DD"
   created_at: string;
+  created_by_name?: string | null;
 }

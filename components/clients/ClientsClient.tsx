@@ -125,10 +125,8 @@ export function ClientsClient({ initialClients }: Props) {
       }
     }
 
-    // Email validation
-    if (!form.email.trim()) {
-      errs.email = locale === 'ar' ? 'البريد الإلكتروني مطلوب' : 'Email is required';
-    } else {
+    // Email validation — optional, only validate format if provided
+    if (form.email.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(form.email.trim())) {
         errs.email = locale === 'ar'
@@ -387,7 +385,7 @@ export function ClientsClient({ initialClients }: Props) {
             type="tel"
             error={fieldErrors.phone}
           />
-          <Input label={t('email')} value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} type="email" error={fieldErrors.email} />
+          <Input label={`${t('email')} (${locale === 'ar' ? 'اختياري' : 'optional'})`} value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} type="email" error={fieldErrors.email} />
           {editingId ? (
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-1">

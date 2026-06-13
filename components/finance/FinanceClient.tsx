@@ -74,6 +74,19 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
   const [displayedInvoices, setDisplayedInvoices] = useState(initialInvoices);
   const [displayedExpenses, setDisplayedExpenses] = useState<Expense[]>(initialExpenses);
 
+  // ── Current user name ────────────────────────────────────────────────────
+  const [currentUserName, setCurrentUserName] = useState<string>('');
+  useEffect(() => {
+    if (DEMO_MODE) { setCurrentUserName('Demo User'); return; }
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase.from('users').select('name').eq('id', data.user.id).single()
+          .then(({ data: u }) => { if (u?.name) setCurrentUserName(u.name); });
+      }
+    });
+  }, []);
+
   // ── Expense form ─────────────────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -191,6 +204,7 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
         notes: form.notes || null,
         date: form.date,
         created_at: new Date().toISOString(),
+        created_by_name: currentUserName || 'Demo User',
       };
       setDisplayedExpenses(prev => [fake, ...prev]);
       toast.success(tCommon('success'));
@@ -203,7 +217,7 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
     const supabase = createClient();
     const { data, error } = await supabase
       .from('expenses')
-      .insert({ shop_id: shop!.id, amount, category: form.category, notes: form.notes || null, date: form.date })
+      .insert({ shop_id: shop!.id, amount, category: form.category, notes: form.notes || null, date: form.date, created_by_name: currentUserName || null })
       .select()
       .single<Expense>();
 
@@ -427,10 +441,11 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
             <table className="w-full text-sm" dir={isRTL ? 'rtl' : 'ltr'}>
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-start px-5 py-3 font-semibold text-gray-600">{locale === 'ar' ? 'التاريخ' : 'Date'}</th>
+                  <th className="text-start px-5 py-3 font-semibold text-gray-600">{locale === 'ar' ? 'التاريخ والوقت' : 'Date & Time'}</th>
                   <th className="text-start px-5 py-3 font-semibold text-gray-600">{locale === 'ar' ? 'الفئة' : 'Category'}</th>
                   <th className="text-start px-5 py-3 font-semibold text-gray-600">{locale === 'ar' ? 'المبلغ' : 'Amount'}</th>
-                  <th className="text-start px-5 py-3 font-semibold text-gray-600 hidden md:table-cell">{locale === 'ar' ? 'ملاحظات' : 'Notes'}</th>
+                  <th className="text-start px-5 py-3 font-semibold text-gray-600 hidden md:table-cell">{locale === 'ar' ? 'أضافه' : 'Added By'}</th>
+                  <th className="text-start px-5 py-3 font-semibold text-gray-600 hidden lg:table-cell">{locale === 'ar' ? 'ملاحظات' : 'Notes'}</th>
                   <th className="px-5 py-3 w-14" />
                 </tr>
               </thead>
@@ -438,7 +453,10 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
                 {displayedExpenses.map((exp) => (
                   <tr key={exp.id} className="hover:bg-gray-50 transition">
                     <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
-                      {new Date(exp.date).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <div>{new Date(exp.date).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                      <div className="text-xs text-gray-400 mt-0.5" dir="ltr">
+                        {new Date(exp.created_at).toLocaleTimeString(locale === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                      </div>
                     </td>
                     <td className="px-5 py-3">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
@@ -449,7 +467,8 @@ export function FinanceClient({ initialInvoices, initialExpenses, defaultFrom, d
                       {exp.amount.toLocaleString()}
                       <span className="text-xs font-normal text-gray-400 ms-1">{locale === 'ar' ? 'ج' : 'EGP'}</span>
                     </td>
-                    <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{exp.notes ?? '—'}</td>
+                    <td className="px-5 py-3 text-gray-600 hidden md:table-cell">{exp.created_by_name ?? '—'}</td>
+                    <td className="px-5 py-3 text-gray-500 hidden lg:table-cell">{exp.notes ?? '—'}</td>
                     <td className="px-5 py-3">
                       <button
                         onClick={() => setDeleteId(exp.id)}
