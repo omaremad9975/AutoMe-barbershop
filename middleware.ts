@@ -6,6 +6,11 @@ const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Public self-punch attendance kiosk — no login required, staff use a PIN.
+  if (pathname.startsWith('/attendance/')) {
+    return NextResponse.next();
+  }
+
   if (DEMO_MODE) {
     const demoSession = request.cookies.get('demo_session')?.value;
 

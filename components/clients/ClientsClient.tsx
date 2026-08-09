@@ -170,7 +170,8 @@ export function ClientsClient({ initialClients }: Props) {
           whatsapp: form.phone || null,
           email: form.email || null,
           notes: form.notes || null,
-          code: clientCode || undefined
+          code: clientCode || undefined,
+          send_digital_invoice: form.phone ? form.sendDigitalInvoice : false
         } : c));
       } else {
         const fakeClient: Client = {
@@ -182,6 +183,7 @@ export function ClientsClient({ initialClients }: Props) {
           email: form.email || null,
           notes: form.notes || null,
           code: clientCode || undefined,
+          send_digital_invoice: form.phone ? form.sendDigitalInvoice : false,
           created_at: new Date().toISOString(),
         };
         setClients((prev) => [fakeClient, ...prev]);
@@ -197,7 +199,7 @@ export function ClientsClient({ initialClients }: Props) {
     if (editingId) {
       const { error } = await supabase
         .from('clients')
-        .update({ name: form.name.trim(), phone: form.phone || null, whatsapp: form.phone || null, email: form.email || null, notes: form.notes || null, send_digital_invoice: form.email ? form.sendDigitalInvoice : false })
+        .update({ name: form.name.trim(), phone: form.phone || null, whatsapp: form.phone || null, email: form.email || null, notes: form.notes || null, send_digital_invoice: form.phone ? form.sendDigitalInvoice : false })
         .eq('id', editingId);
 
       if (!error) {
@@ -208,7 +210,7 @@ export function ClientsClient({ initialClients }: Props) {
           whatsapp: form.phone || null,
           email: form.email || null,
           notes: form.notes || null,
-          send_digital_invoice: form.email ? form.sendDigitalInvoice : false
+          send_digital_invoice: form.phone ? form.sendDigitalInvoice : false
         } : c));
         toast.success(tCommon('success'));
         setShowForm(false);
@@ -226,7 +228,7 @@ export function ClientsClient({ initialClients }: Props) {
           email: form.email || null,
           notes: form.notes || null,
           code: clientCode,
-          send_digital_invoice: form.email ? form.sendDigitalInvoice : false
+          send_digital_invoice: form.phone ? form.sendDigitalInvoice : false
         })
         .select()
         .single<Client>();
@@ -389,26 +391,26 @@ export function ClientsClient({ initialClients }: Props) {
           />
           <Input label={`${t('email')} (${locale === 'ar' ? 'اختياري' : 'optional'})`} value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} type="email" error={fieldErrors.email} />
 
-          {/* Send Digital Invoice toggle */}
-          <div className={`flex items-center justify-between px-4 py-3 rounded-xl border transition ${form.email ? 'border-gray-200 bg-gray-50' : 'border-gray-100 bg-gray-50 opacity-50'}`}>
+          {/* Send Digital Invoice toggle — via WhatsApp (email invoices removed) */}
+          <div className={`flex items-center justify-between px-4 py-3 rounded-xl border transition ${form.phone ? 'border-gray-200 bg-gray-50' : 'border-gray-100 bg-gray-50 opacity-50'}`}>
             <div>
               <p className="text-sm font-medium text-gray-700">
-                {locale === 'ar' ? 'إرسال فاتورة رقمية' : 'Send Digital Invoice'}
+                {locale === 'ar' ? 'إرسال فاتورة رقمية عبر واتساب' : 'Send Digital Invoice via WhatsApp'}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
                 {locale === 'ar'
-                  ? (form.email ? 'سيتم إرسال الفاتورة على البريد الإلكتروني' : 'أدخل البريد الإلكتروني أولاً')
-                  : (form.email ? 'Invoice will be sent to their email' : 'Enter email first to enable')}
+                  ? (form.phone ? 'سيتم إرسال الفاتورة على واتساب' : 'أدخل رقم الهاتف أولاً')
+                  : (form.phone ? 'Invoice will be sent via WhatsApp' : 'Enter phone number first to enable')}
               </p>
             </div>
             <button
               type="button"
-              disabled={!form.email}
-              onClick={() => form.email && setForm((f) => ({ ...f, sendDigitalInvoice: !f.sendDigitalInvoice }))}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${form.sendDigitalInvoice && form.email ? 'bg-blue-600' : 'bg-gray-300'}`}
+              disabled={!form.phone}
+              onClick={() => form.phone && setForm((f) => ({ ...f, sendDigitalInvoice: !f.sendDigitalInvoice }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${form.sendDigitalInvoice && form.phone ? 'bg-blue-600' : 'bg-gray-300'}`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.sendDigitalInvoice && form.email ? (locale === 'ar' ? '-translate-x-6' : 'translate-x-6') : 'translate-x-1'}`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.sendDigitalInvoice && form.phone ? (locale === 'ar' ? '-translate-x-6' : 'translate-x-6') : 'translate-x-1'}`}
               />
             </button>
           </div>

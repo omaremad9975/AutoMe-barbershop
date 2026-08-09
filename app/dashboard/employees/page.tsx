@@ -17,6 +17,10 @@ export default async function EmployeesPage() {
     .from('users').select('role').eq('id', user!.id).single<Pick<User, 'role'>>();
   if (userRow?.role !== 'owner') redirect('/dashboard/pos');
 
-  const { data: employees } = await supabase.from('employees').select('*').order('name');
+  // Explicit column list — never select pin_hash from the client bundle.
+  const { data: employees } = await supabase
+    .from('employees')
+    .select('id, shop_id, name, phone, position, shift, hire_date, active, code, has_pin, created_at')
+    .order('name');
   return <EmployeesClient initialEmployees={(employees ?? []) as Employee[]} />;
 }

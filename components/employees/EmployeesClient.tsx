@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { Plus, Edit2, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, Edit2, Trash2, RotateCcw, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useShop } from '@/lib/hooks/useShop';
@@ -86,6 +86,72 @@ export function EmployeesClient({ initialEmployees }: Props) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
+
+  // ── PIN management (attendance kiosk login) ──────────────────────────────
+  const [pinModalEmp, setPinModalEmp] = useState<Employee | null>(null);
+  const [pinValue, setPinValue] = useState('');
+  const [pinSaving, setPinSaving] = useState(false);
+
+  const PIN_ERROR_MESSAGES: Record<string, string> = {
+    PIN_IN_USE: locale === 'ar' ? 'هذا الرمز مستخدم بالفعل لموظف آخر في هذا المحل' : 'This PIN is already used by another employee here',
+    INVALID_PIN_FORMAT: locale === 'ar' ? 'اكتب رمزاً مكوّناً من 4 أرقام' : 'Enter a 4-digit code',
+    NOT_OWNER: locale === 'ar' ? 'المالك فقط يمكنه تعديل الرموز' : 'Only the owner can manage PINs',
+    EMPLOYEE_NOT_FOUND: locale === 'ar' ? 'الموظف غير موجود' : 'Employee not found',
+  };
+
+  function openPinModal(emp: Employee) {
+    setPinModalEmp(emp);
+    setPinValue('');
+  }
+
+  async function handleSavePin() {
+    if (!pinModalEmp) return;
+    if (!/^[0-9]{4}$/.test(pinValue)) {
+      toast.error(PIN_ERROR_MESSAGES.INVALID_PIN_FORMAT);
+      return;
+    }
+    setPinSaving(true);
+
+    if (DEMO_MODE) {
+      setEmployees((prev) => prev.map((e) => e.id === pinModalEmp.id ? { ...e, has_pin: true } : e));
+      toast.success(tCommon('success'));
+      setPinModalEmp(null);
+      setPinValue('');
+      setPinSaving(false);
+      return;
+    }
+
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc('set_employee_pin', {
+      p_employee_id: pinModalEmp.id, p_pin: pinValue,
+    });
+
+    if (error || !data?.success) {
+      toast.error(PIN_ERROR_MESSAGES[data?.error] ?? tCommon('error'));
+    } else {
+      setEmployees((prev) => prev.map((e) => e.id === pinModalEmp.id ? { ...e, has_pin: true } : e));
+      toast.success(tCommon('success'));
+      setPinModalEmp(null);
+      setPinValue('');
+    }
+    setPinSaving(false);
+  }
+
+  async function handleClearPin(emp: Employee) {
+    if (DEMO_MODE) {
+      setEmployees((prev) => prev.map((e) => e.id === emp.id ? { ...e, has_pin: false } : e));
+      toast.success(tCommon('success'));
+      return;
+    }
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc('clear_employee_pin', { p_employee_id: emp.id });
+    if (!error && data?.success) {
+      setEmployees((prev) => prev.map((e) => e.id === emp.id ? { ...e, has_pin: false } : e));
+      toast.success(tCommon('success'));
+    } else {
+      toast.error(PIN_ERROR_MESSAGES[data?.error] ?? tCommon('error'));
+    }
+  }
 
   const displayed = employees.filter((e) => listMode === 'active' ? e.active : !e.active);
 
@@ -239,6 +305,23 @@ export function EmployeesClient({ initialEmployees }: Props) {
                   )}
                 </div>
 
+                {/* PIN status — used for attendance kiosk punch-in */}
+                {listMode === 'active' && (
+                  <div className="mt-3">
+                    {emp.has_pin ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        {locale === 'ar' ? 'الرمز مُفعّل' : 'PIN set'}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                        <ShieldOff className="w-3.5 h-3.5" />
+                        {locale === 'ar' ? 'لا يوجد رمز' : 'No PIN'}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
                   {listMode === 'active' ? (
                     <>
@@ -248,6 +331,13 @@ export function EmployeesClient({ initialEmployees }: Props) {
                       >
                         <Edit2 className="w-4 h-4" />
                         {tCommon('edit')}
+                      </button>
+                      <button
+                        onClick={() => openPinModal(emp)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition"
+                      >
+                        <KeyRound className="w-4 h-4" />
+                        {emp.has_pin ? (locale === 'ar' ? 'تغيير الرمز' : 'Reset PIN') : (locale === 'ar' ? 'تعيين رمز' : 'Set PIN')}
                       </button>
                       <button
                         onClick={() => setDeactivateId(emp.id)}
@@ -324,6 +414,45 @@ export function EmployeesClient({ initialEmployees }: Props) {
         <div className="flex gap-3">
           <Button variant="outline" onClick={() => setDeactivateId(null)} className="flex-1">{tCommon('cancel')}</Button>
           <Button variant="danger" onClick={handleDeactivate} className="flex-1">{tCommon('confirm')}</Button>
+        </div>
+      </Modal>
+
+      {/* Set / Reset PIN modal — used for the attendance self-punch page */}
+      <Modal
+        open={!!pinModalEmp}
+        onClose={() => { setPinModalEmp(null); setPinValue(''); }}
+        title={pinModalEmp?.has_pin ? (locale === 'ar' ? 'تغيير الرمز السري' : 'Reset PIN') : (locale === 'ar' ? 'تعيين رمز سري' : 'Set PIN')}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            {locale === 'ar'
+              ? `رمز مكوّن من 4 أرقام يستخدمه ${pinModalEmp?.name ?? ''} لتسجيل الحضور والانصراف. المالك فقط لا يحتاج رمزاً.`
+              : `A 4-digit code ${pinModalEmp?.name ?? ''} uses to punch in/out on the attendance page. Only the owner doesn't need one.`}
+          </p>
+          <Input
+            label={locale === 'ar' ? 'الرمز (4 أرقام)' : 'PIN (4 digits)'}
+            value={pinValue}
+            onChange={(e) => setPinValue(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            type="text"
+            inputMode="numeric"
+            maxLength={4}
+            placeholder="••••"
+          />
+          <div className="flex gap-3">
+            {pinModalEmp?.has_pin && (
+              <Button
+                variant="outline"
+                onClick={() => pinModalEmp && handleClearPin(pinModalEmp)}
+                className="flex-1"
+              >
+                {locale === 'ar' ? 'إزالة الرمز' : 'Remove PIN'}
+              </Button>
+            )}
+            <Button onClick={handleSavePin} disabled={pinSaving || pinValue.length !== 4} className="flex-1">
+              {pinSaving ? tCommon('loading') : tCommon('save')}
+            </Button>
+          </div>
         </div>
       </Modal>
     </>

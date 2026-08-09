@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { Plus, Minus, Trash2, Printer, Search, X, Percent, DollarSign, Package } from 'lucide-react';
+import { Plus, Minus, Trash2, Printer, Search, X, Percent, DollarSign, Package, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useShop } from '@/lib/hooks/useShop';
@@ -14,7 +14,7 @@ import { Modal } from '@/components/ui/Modal';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Receipt } from './Receipt';
 import { QuickAddClient } from './QuickAddClient';
-import { formatCurrency, formatClientCode } from '@/lib/utils';
+import { formatCurrency, formatClientCode, buildWhatsAppLink, buildInvoiceWhatsAppMessage } from '@/lib/utils';
 import type { Client, Service, Employee, Product, CartItem, Invoice, InvoiceItem, PaymentMethod } from '@/lib/types';
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
@@ -66,6 +66,10 @@ export function POSClient({ initialClients, initialServices, initialEmployees, i
   const [showReceipt, setShowReceipt] = useState(false);
   const [savedInvoice, setSavedInvoice] = useState<Invoice | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+
+  // ── WhatsApp digital invoice ──────────────────────────────────────────────
+  const [showWaInput, setShowWaInput] = useState(false);
+  const [waPhoneInput, setWaPhoneInput] = useState('');
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = discountType === 'percent'
@@ -188,6 +192,28 @@ export function POSClient({ initialClients, initialServices, initialEmployees, i
     setCart([]); clearClient(); setSelectedEmployeeId('');
     setDiscountValue(0); setDiscountType('amount'); setPaymentMethod('cash');
     setShowReceipt(false); setSavedInvoice(null);
+    setShowWaInput(false); setWaPhoneInput('');
+  }
+
+  // ── WhatsApp digital invoice — replaces email as the only digital option ──
+  function sendInvoiceWhatsApp(phone: string) {
+    if (!savedInvoice || !shop || !phone.trim()) return;
+    const items = (savedInvoice.invoice_items ?? []).map((it) => ({
+      name: it.name_snapshot, qty: it.quantity, lineTotal: it.price_snapshot * it.quantity,
+    }));
+    const message = buildInvoiceWhatsAppMessage(
+      { id: savedInvoice.id, net_total: savedInvoice.net_total, total: savedInvoice.total, discount: savedInvoice.discount, created_at: savedInvoice.created_at, items },
+      shop.name
+    );
+    window.open(buildWhatsAppLink(phone, message), '_blank');
+    setShowWaInput(false);
+    setWaPhoneInput('');
+  }
+
+  function handleWhatsAppClick() {
+    const onFile = savedInvoice?.client?.whatsapp || savedInvoice?.client?.phone || '';
+    if (onFile) { sendInvoiceWhatsApp(onFile); return; }
+    setShowWaInput(true);
   }
 
   const activeServices = initialServices.filter((s) => s.active);
@@ -398,7 +424,34 @@ export function POSClient({ initialClients, initialServices, initialEmployees, i
               <Button variant="outline" onClick={() => window.print()} className="flex-1">
                 <Printer className="w-4 h-4" />{tCommon('print')}
               </Button>
-              <Button onClick={resetPOS} className="flex-1">
+              <Button variant="outline" onClick={handleWhatsAppClick} className="flex-1">
+                <MessageCircle className="w-4 h-4" />
+                {locale === 'ar' ? 'فاتورة رقمية' : 'Digital Invoice'}
+              </Button>
+            </div>
+
+            {showWaInput && (
+              <div className="mt-3 bg-gray-50 border border-gray-200 rounded-xl p-3 print:hidden">
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                  {locale === 'ar' ? 'رقم واتساب العميل' : "Client's WhatsApp number"}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    value={waPhoneInput}
+                    onChange={(e) => setWaPhoneInput(e.target.value)}
+                    dir="ltr"
+                    placeholder="01xxxxxxxxx"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                  <Button onClick={() => sendInvoiceWhatsApp(waPhoneInput)} disabled={!waPhoneInput.trim()}>
+                    {locale === 'ar' ? 'إرسال 💬' : 'Send 💬'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="print:hidden">
+              <Button onClick={resetPOS} className="w-full mt-3">
                 {locale === 'ar' ? 'فاتورة جديدة' : 'New Invoice'}
               </Button>
             </div>

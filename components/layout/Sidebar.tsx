@@ -7,7 +7,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import Image from 'next/image';
 import {
   ShoppingCart, Calendar, Users, Scissors, UserCheck,
-  BarChart3, Settings, X, Package, LogOut, Pin, PinOff, Wallet,
+  BarChart3, Settings, X, Package, LogOut, Pin, PinOff, Wallet, Fingerprint,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -29,6 +29,7 @@ const navItems = [
   { key: 'services', href: '/dashboard/services', icon: Scissors, ownerOnly: false },
   { key: 'products', href: '/dashboard/products', icon: Package, ownerOnly: false },
   { key: 'employees', href: '/dashboard/employees', icon: UserCheck, ownerOnly: true },
+  { key: 'attendance', href: '/dashboard/attendance', icon: Fingerprint, ownerOnly: true },
   { key: 'reports',   href: '/dashboard/reports',   icon: BarChart3, ownerOnly: true },
   { key: 'finance',   href: '/dashboard/finance',   icon: Wallet,    ownerOnly: true },
   { key: 'settings',  href: '/dashboard/settings',  icon: Settings,  ownerOnly: true },

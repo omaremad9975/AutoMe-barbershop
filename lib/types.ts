@@ -10,6 +10,9 @@ export interface Shop {
   logo_url: string | null;
   brand_color: string;
   slug: string;
+  lat?: number | null;
+  lng?: number | null;
+  attendance_radius_m?: number;
   created_at: string;
 }
 
@@ -77,7 +80,30 @@ export interface Employee {
   shift: string | null;
   hire_date: string | null;
   active: boolean;
+  code?: number | null;
+  has_pin?: boolean;
   created_at: string;
+}
+
+// ── Attendance ───────────────────────────────────────────────────────────────
+export type AttendanceMarkedBy = 'self' | 'owner';
+
+export interface Attendance {
+  id: string;
+  shop_id: string;
+  employee_id: string;
+  date: string;                 // "YYYY-MM-DD"
+  check_in: string | null;
+  check_in_lat: number | null;
+  check_in_lng: number | null;
+  check_in_distance_m: number | null;
+  check_out: string | null;
+  check_out_lat: number | null;
+  check_out_lng: number | null;
+  check_out_distance_m: number | null;
+  marked_by: AttendanceMarkedBy;
+  created_at: string;
+  employee?: Employee;
 }
 
 export interface Appointment {

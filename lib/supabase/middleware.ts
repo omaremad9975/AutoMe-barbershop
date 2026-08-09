@@ -31,8 +31,8 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Allow public routes
-  if (pathname.startsWith('/login') || pathname.startsWith('/api/auth')) {
+  // Allow public routes — /attendance is the public self-punch kiosk (PIN, no login)
+  if (pathname.startsWith('/login') || pathname.startsWith('/api/auth') || pathname.startsWith('/attendance/')) {
     if (user && pathname === '/login') {
       return NextResponse.redirect(new URL('/dashboard/pos', request.url));
     }

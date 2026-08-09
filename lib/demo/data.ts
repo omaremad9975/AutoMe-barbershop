@@ -15,6 +15,9 @@ export const DEMO_SHOP: Shop = {
   logo_url: null,
   brand_color: '#1a1a2e',
   slug: 'barber-king',
+  lat: 30.0444,
+  lng: 31.2357,
+  attendance_radius_m: 150,
   created_at: '2024-01-01T00:00:00Z',
 };
 
@@ -64,9 +67,9 @@ export const DEMO_SERVICES: Service[] = [
 ];
 
 export const DEMO_EMPLOYEES: Employee[] = [
-  { id: 'e1', shop_id: 'demo-shop-001', name: 'محمد رضا',  phone: '01011112222', position: 'حلاق أول', shift: 'صباحي',  hire_date: '2022-06-01', active: true, created_at: '2022-06-01T00:00:00Z' },
-  { id: 'e2', shop_id: 'demo-shop-001', name: 'كريم أحمد', phone: '01033334444', position: 'حلاق',     shift: 'مسائي',  hire_date: '2023-01-15', active: true, created_at: '2023-01-15T00:00:00Z' },
-  { id: 'e3', shop_id: 'demo-shop-001', name: 'يوسف سامي', phone: '01055556666', position: 'مساعد',    shift: 'صباحي',  hire_date: '2024-02-01', active: true, created_at: '2024-02-01T00:00:00Z' },
+  { id: 'e1', shop_id: 'demo-shop-001', name: 'محمد رضا',  phone: '01011112222', position: 'حلاق أول', shift: 'صباحي',  hire_date: '2022-06-01', active: true, code: 1, has_pin: true,  created_at: '2022-06-01T00:00:00Z' },
+  { id: 'e2', shop_id: 'demo-shop-001', name: 'كريم أحمد', phone: '01033334444', position: 'حلاق',     shift: 'مسائي',  hire_date: '2023-01-15', active: true, code: 2, has_pin: true,  created_at: '2023-01-15T00:00:00Z' },
+  { id: 'e3', shop_id: 'demo-shop-001', name: 'يوسف سامي', phone: '01055556666', position: 'مساعد',    shift: 'صباحي',  hire_date: '2024-02-01', active: true, code: 3, has_pin: false, created_at: '2024-02-01T00:00:00Z' },
 ];
 
 const today = new Date().toISOString().split('T')[0];

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Image from 'next/image';
-import { Upload, Scissors, Check, Clock, Briefcase, Plus, Trash2, KeyRound } from 'lucide-react';
+import { Upload, Scissors, Check, Clock, Briefcase, Plus, Trash2, KeyRound, MapPin, LocateFixed } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
@@ -93,6 +93,50 @@ export function SettingsClient({ shop }: Props) {
     } catch { }
   }, []);
   const [newPosition, setNewPosition] = useState('');
+
+  // ── Attendance geofence (GPS location + radius) — owner only ────────────
+  const [attLat, setAttLat] = useState<number | null>(shop.lat ?? null);
+  const [attLng, setAttLng] = useState<number | null>(shop.lng ?? null);
+  const [attRadius, setAttRadius] = useState<number>(shop.attendance_radius_m ?? 150);
+  const [locating, setLocating] = useState(false);
+  const [savingAttendance, setSavingAttendance] = useState(false);
+
+  function useCurrentLocation() {
+    if (!('geolocation' in navigator)) {
+      toast.error(locale === 'ar' ? 'جهازك لا يدعم تحديد الموقع' : 'This device does not support location');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setAttLat(pos.coords.latitude);
+        setAttLng(pos.coords.longitude);
+        setLocating(false);
+        toast.success(locale === 'ar' ? 'تم تحديد موقع المحل' : 'Shop location captured');
+      },
+      () => {
+        setLocating(false);
+        toast.error(locale === 'ar' ? 'تعذر تحديد الموقع، فعّل الـ GPS وحاول تاني' : 'Could not get location — enable GPS and try again');
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  }
+
+  async function handleSaveAttendance() {
+    if (DEMO_MODE) {
+      toast.success(t('settingsSaved'));
+      return;
+    }
+    setSavingAttendance(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('shops')
+      .update({ lat: attLat, lng: attLng, attendance_radius_m: attRadius })
+      .eq('id', shop.id);
+    if (error) toast.error(tCommon('error'));
+    else toast.success(t('settingsSaved'));
+    setSavingAttendance(false);
+  }
 
   // ── Change Password ─────────────────────────────────────────────────────
   const [oldPassword, setOldPassword] = useState('');
@@ -295,6 +339,63 @@ export function SettingsClient({ shop }: Props) {
         <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
           <h3 className="font-semibold text-gray-800">{locale === 'ar' ? 'بيانات المحل' : 'Shop Details'}</h3>
           <Input label={t('shopName')} value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+
+        {/* ── Attendance geofence (GPS) ──────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <MapPin className="w-5 h-5 text-gray-400" />
+            <h3 className="font-semibold text-gray-800">
+              {locale === 'ar' ? 'موقع الحضور والانصراف (GPS)' : 'Attendance Location (GPS)'}
+            </h3>
+          </div>
+          <p className="text-sm text-gray-400 mb-5">
+            {locale === 'ar'
+              ? 'حدد موقع المحل ونطاق السماح حتى يقدر الموظفون يسجلوا حضورهم من صفحة البصمة الذاتية فقط وهم داخل المحل'
+              : 'Set the shop location and allowed radius so staff can only punch in/out from the self-punch page while physically at the shop'}
+          </p>
+
+          <div className="flex items-center gap-3 mb-4">
+            <Button variant="outline" onClick={useCurrentLocation} disabled={locating}>
+              <LocateFixed className="w-4 h-4" />
+              {locating
+                ? (locale === 'ar' ? 'جارٍ التحديد...' : 'Locating...')
+                : (locale === 'ar' ? 'استخدام موقعي الحالي' : 'Use My Current Location')}
+            </Button>
+            {attLat != null && attLng != null && (
+              <span className="text-xs text-gray-400" dir="ltr">
+                {attLat.toFixed(5)}, {attLng.toFixed(5)}
+              </span>
+            )}
+          </div>
+
+          {attLat == null || attLng == null ? (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mb-4">
+              {locale === 'ar'
+                ? 'لم يتم تحديد موقع المحل بعد — سيتم السماح بتسجيل الحضور من أي مكان حتى يتم تحديده'
+                : "Shop location isn't set yet — attendance will be allowed from anywhere until you set it"}
+            </p>
+          ) : null}
+
+          <div className="max-w-xs">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {locale === 'ar' ? 'نطاق السماح (متر)' : 'Allowed radius (meters)'}
+            </label>
+            <input
+              type="number"
+              min={10}
+              step={10}
+              value={attRadius}
+              onChange={(e) => setAttRadius(Math.max(10, Number(e.target.value) || 0))}
+              dir="ltr"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <Button variant="outline" onClick={handleSaveAttendance} disabled={savingAttendance} className="mt-4 w-full">
+            <MapPin className="w-4 h-4" />
+            {savingAttendance ? tCommon('loading') : (locale === 'ar' ? 'حفظ إعدادات الحضور' : 'Save Attendance Settings')}
+          </Button>
         </div>
 
         {/* #10 — Theme selector (replaces color picker) */}
