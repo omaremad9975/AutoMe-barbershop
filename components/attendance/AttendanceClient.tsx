@@ -19,14 +19,18 @@ interface Props {
   defaultTo: string;
 }
 
-function formatDuration(startIso: string | null, endIso: string | null): string {
+function formatMinutes(mins: number, locale: string): string {
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  return locale === 'ar' ? `${h}س ${m}د` : `${h}h ${m}m`;
+}
+
+function formatDuration(startIso: string | null, endIso: string | null, locale: string): string {
   if (!startIso) return '—';
   const start = new Date(startIso).getTime();
   const end = endIso ? new Date(endIso).getTime() : Date.now();
   const mins = Math.max(0, Math.round((end - start) / 60000));
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${h}س ${m}د`;
+  return formatMinutes(mins, locale);
 }
 
 export function AttendanceClient({ shop, initialEmployees, initialAttendance, defaultFrom, defaultTo }: Props) {
@@ -84,7 +88,7 @@ export function AttendanceClient({ shop, initialEmployees, initialAttendance, de
     const start = new Date(r.check_in).getTime();
     return sum + Math.max(0, (end - start) / 60000);
   }, 0);
-  const totalHoursLabel = `${Math.floor(totalMinutes / 60)}س ${Math.round(totalMinutes % 60)}د`;
+  const totalHoursLabel = formatMinutes(totalMinutes, locale);
 
   return (
     <>
@@ -220,7 +224,7 @@ export function AttendanceClient({ shop, initialEmployees, initialAttendance, de
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-3 font-semibold text-gray-900">{formatDuration(r.check_in, r.check_out)}</td>
+                    <td className="px-5 py-3 font-semibold text-gray-900">{formatDuration(r.check_in, r.check_out, locale)}</td>
                     <td className="px-5 py-3 text-gray-500 hidden md:table-cell">
                       {r.check_in_distance_m != null ? `${r.check_in_distance_m}م` : '—'}
                     </td>
