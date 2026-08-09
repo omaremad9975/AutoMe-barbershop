@@ -7,12 +7,13 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import type { Attendance, Shop } from '@/lib/types';
+import type { Attendance, Employee, Shop } from '@/lib/types';
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 interface Props {
   shop: Shop;
+  initialEmployees: Pick<Employee, 'id' | 'name'>[];
   initialAttendance: Attendance[];
   defaultFrom: string;
   defaultTo: string;
@@ -28,15 +29,18 @@ function formatDuration(startIso: string | null, endIso: string | null): string 
   return `${h}س ${m}د`;
 }
 
-export function AttendanceClient({ shop, initialAttendance, defaultFrom, defaultTo }: Props) {
+export function AttendanceClient({ shop, initialEmployees, initialAttendance, defaultFrom, defaultTo }: Props) {
   const locale = useLocale();
   const isRTL = locale === 'ar';
 
   const [fromDate, setFromDate] = useState(defaultFrom);
   const [toDate, setToDate] = useState(defaultTo);
   const [records, setRecords] = useState<Attendance[]>(initialAttendance);
+  const [employees, setEmployees] = useState(initialEmployees);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const employeeName = (id: string) => employees.find((e) => e.id === id)?.name ?? '—';
 
   const punchUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/attendance/${shop.slug}`
@@ -51,13 +55,17 @@ export function AttendanceClient({ shop, initialAttendance, defaultFrom, default
       return;
     }
     const supabase = createClient();
-    const { data } = await supabase
-      .from('attendance')
-      .select('*, employee:employees(id, name)')
-      .gte('date', fromDate)
-      .lte('date', toDate)
-      .order('check_in', { ascending: false });
+    const [{ data }, { data: empData }] = await Promise.all([
+      supabase
+        .from('attendance')
+        .select('*')
+        .gte('date', fromDate)
+        .lte('date', toDate)
+        .order('check_in', { ascending: false }),
+      supabase.from('employees').select('id, name'),
+    ]);
     setRecords((data ?? []) as Attendance[]);
+    if (empData) setEmployees(empData as Pick<Employee, 'id' | 'name'>[]);
     setLoading(false);
   }
 
@@ -192,7 +200,7 @@ export function AttendanceClient({ shop, initialAttendance, defaultFrom, default
               <tbody className="divide-y divide-gray-100">
                 {records.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50 transition">
-                    <td className="px-5 py-3 font-medium text-gray-800">{r.employee?.name ?? '—'}</td>
+                    <td className="px-5 py-3 font-medium text-gray-800">{employeeName(r.employee_id)}</td>
                     <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
                       {new Date(r.date).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </td>

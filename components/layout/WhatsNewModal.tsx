@@ -2,32 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { useLocale } from 'next-intl';
-import { Sparkles, X, KeyRound, BarChart2, Search, FileCheck } from 'lucide-react';
+import { Sparkles, X, Fingerprint, MapPin, MessageCircle, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 // ─── UPDATE THIS every time you release new features ───────────────────────
-const CURRENT_VERSION = '1.2';
+const CURRENT_VERSION = '1.3';
 
 const WHATS_NEW: { ar: string; en: string; icon: React.ReactNode }[] = [
   {
+    icon: <Fingerprint className="w-5 h-5 text-indigo-500" />,
+    ar: 'صفحة حضور وانصراف جديدة للموظفين — تسجيل ذاتي برمز سري من 4 أرقام + التحقق من الموقع (GPS)',
+    en: 'New staff attendance page — self check-in/out with a 4-digit PIN + GPS location check',
+  },
+  {
     icon: <KeyRound className="w-5 h-5 text-blue-500" />,
-    ar: 'تغيير كلمة المرور من صفحة الإعدادات — مع التحقق من كلمة المرور القديمة أولاً',
-    en: 'Change password from Settings — with old password verification first',
+    ar: 'تعيين رمز سري لكل موظف من صفحة الموظفين (المالك فقط لا يحتاج رمزاً)',
+    en: 'Set a PIN for each employee from the Employees page (only the owner needs no PIN)',
   },
   {
-    icon: <BarChart2 className="w-5 h-5 text-green-500" />,
-    ar: 'صفحة الحسابات: تتبع مصاريف المحل وتقاريرها',
-    en: 'Accounts page: track and report shop expenses',
+    icon: <MapPin className="w-5 h-5 text-emerald-500" />,
+    ar: 'تحديد موقع المحل ونطاق السماح من الإعدادات، لضمان تسجيل الحضور من داخل المحل فقط',
+    en: 'Set the shop location and allowed radius from Settings, so attendance can only be marked from inside the shop',
   },
   {
-    icon: <Search className="w-5 h-5 text-purple-500" />,
-    ar: 'البحث عن العملاء في نافذة المواعيد',
-    en: 'Search clients in the appointments modal',
-  },
-  {
-    icon: <FileCheck className="w-5 h-5 text-amber-500" />,
-    ar: 'إصلاح ملخص الوردية — يظهر الآن جميع الفواتير بشكل صحيح',
-    en: 'Shift summary fix — all invoices now appear correctly',
+    icon: <MessageCircle className="w-5 h-5 text-green-500" />,
+    ar: 'الفاتورة الرقمية أصبحت تُرسل عبر واتساب بدلاً من البريد الإلكتروني',
+    en: 'Digital invoices are now sent via WhatsApp instead of email',
   },
 ];
 // ───────────────────────────────────────────────────────────────────────────

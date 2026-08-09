@@ -13,6 +13,7 @@ export default async function AttendancePage() {
     return (
       <AttendanceClient
         shop={DEMO_SHOP}
+        initialEmployees={DEMO_EMPLOYEES.map((e) => ({ id: e.id, name: e.name }))}
         initialAttendance={[]}
         defaultFrom={today}
         defaultTo={today}
@@ -28,19 +29,29 @@ export default async function AttendancePage() {
     .from('users').select('role, shop_id').eq('id', user.id).single<Pick<User, 'role' | 'shop_id'>>();
   if (userRow?.role !== 'owner') redirect('/dashboard/pos');
 
-  const [{ data: shop }, { data: attendance }] = await Promise.all([
+  const [{ data: shop }, { data: employees }, { data: attendance, error: attendanceError }] = await Promise.all([
     supabase.from('shops').select('*').eq('id', userRow.shop_id).single<Shop>(),
+    supabase.from('employees').select('id, name'),
+    // No embedded employee:employees(...) join here on purpose — PostgREST's
+    // schema cache can lag behind a freshly-created table/FK right after a
+    // migration, which silently returns an empty result instead of an error.
+    // Employee names are resolved client-side from the `employees` list instead.
     supabase
       .from('attendance')
-      .select('*, employee:employees(id, name)')
+      .select('*')
       .gte('date', today)
       .lte('date', today)
       .order('check_in', { ascending: false }),
   ]);
 
+  if (attendanceError) {
+    console.error('attendance fetch error:', attendanceError);
+  }
+
   return (
     <AttendanceClient
       shop={shop!}
+      initialEmployees={(employees ?? []) as Pick<Employee, 'id' | 'name'>[]}
       initialAttendance={(attendance ?? []) as Attendance[]}
       defaultFrom={today}
       defaultTo={today}
